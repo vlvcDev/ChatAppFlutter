@@ -1,0 +1,37 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{document} {
+      allow create: if true;
+      allow read: if request.auth.uid == resource.data.email;
+      allow write: if false;
+      allow delete: if false;
+    }
+
+    match /users/{parent}/Conversations/{document} {
+      allow create: if true;
+      allow read: if resource.data.post_user == /databases/$(database)/documents/users/$(request.auth.uid);
+      allow write: if false;
+      allow delete: if false;
+    }
+
+    match /{path=**}/Conversations/{document} {
+      allow read: if resource.data.post_user == /databases/$(database)/documents/users/$(request.auth.uid);
+    }
+
+
+    match /users/{parent}/statistics/{document} {
+      allow create: if request.auth.uid == parent;
+      allow read: if request.auth.uid == parent;
+      allow write: if request.auth.uid == parent;
+      allow delete: if request.auth.uid == parent;
+    }
+
+    match /users/{parent}/messages/{document} {
+      allow create: if request.auth.uid == parent;
+      allow read: if request.auth.uid == parent;
+      allow write: if request.auth.uid == parent;
+      allow delete: if request.auth.uid == parent;
+    }
+  }
+}
