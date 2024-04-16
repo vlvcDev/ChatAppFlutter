@@ -111,6 +111,14 @@ class _ChatHomeWidgetState extends State<ChatHomeWidget> with TickerProviderStat
       // Update the title with the ID
       conversation['title'] = 'id: $conversationId';
 
+      // Query the 'titleGPT' function with the current conversation data
+      try {
+        final titleResponse = await _gptService.titleGPT(_getConversationContext());
+        // Set the response as the new conversation title
+        conversation['title'] = titleResponse;
+      } catch (e) {
+        print('Error: $e');
+      }
       var lastUserMessage = _chatMessages[_chatMessages.length - 2];
       var lastBotMessage = _chatMessages[_chatMessages.length - 1];
 
@@ -195,6 +203,7 @@ class _ChatHomeWidgetState extends State<ChatHomeWidget> with TickerProviderStat
         .collection('users')
         .doc(userId)
         .collection('Conversations')  // Make sure 'Conversations' is correctly named
+        .orderBy('last_messaged', descending: true)
         .snapshots();
   }
 
@@ -496,6 +505,32 @@ class _ChatHomeWidgetState extends State<ChatHomeWidget> with TickerProviderStat
                   ],
                 ),
               ),
+            FFButtonWidget(
+              onPressed: () {
+                // Add your onPressed code here!
+                setState(() {
+                  _chatMessages.clear();
+                });
+              },
+              text: 'New Chat',
+              options: FFButtonOptions(
+              height: 40.0,
+              padding: const EdgeInsetsDirectional.fromSTEB(34.0, 0.0, 34.0, 0.0),
+              iconPadding: const EdgeInsetsDirectional.fromSTEB(0.0, 0.0, 0.0, 0.0),
+              color: FlutterFlowTheme.of(context).secondary,
+              textStyle: FlutterFlowTheme.of(context).titleSmall.override(
+                fontFamily: 'Roboto',
+                color: FlutterFlowTheme.of(context).alternate,
+                letterSpacing: 0.0,
+              ),
+              elevation: 3.0,
+              borderSide: const BorderSide(
+                color: Colors.transparent,
+                width: 1.0,
+              ),
+              borderRadius: BorderRadius.circular(8.0),
+              ),
+            ),
       Expanded(
         child: StreamBuilder<QuerySnapshot>(
           stream: getUserConversationsStream(), // Defined as shown previously

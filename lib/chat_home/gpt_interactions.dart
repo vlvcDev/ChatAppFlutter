@@ -9,7 +9,7 @@ class GPTService {
       final systemMessage = OpenAIChatCompletionChoiceMessageModel(
         content: [
           OpenAIChatCompletionChoiceMessageContentItemModel.text(
-            "Respond as if you are experienced in Computer Science. My name is $currentUserDisplayName.",
+            "My name is $currentUserDisplayName. Give me concise and informative responses to the following questions: ",
           ),
         ],
         role: OpenAIChatMessageRole.assistant,
@@ -31,6 +31,41 @@ class GPTService {
     messages: requestMessages,
     temperature: 0.7,
     maxTokens: 300,
+  );
+
+    print(chatCompletion.choices.first.message); // ...
+    // ignore: prefer_interpolation_to_compose_strings
+    print("Tokens: ${chatCompletion.usage.promptTokens}"); // ...
+    return chatCompletion.choices.first.message.content?.first.text;
+  }
+
+  Future<String?> titleGPT(String conversation) async {
+    print(currentUserDisplayName);
+      final systemMessage = OpenAIChatCompletionChoiceMessageModel(
+        content: [
+          OpenAIChatCompletionChoiceMessageContentItemModel.text(
+            "Create a short title that summarizes the given text, do not include any prefixes, delimiters, or quotations: ",
+          ),
+        ],
+        role: OpenAIChatMessageRole.assistant,
+      );
+     final userMessage = OpenAIChatCompletionChoiceMessageModel(
+      content: [
+        OpenAIChatCompletionChoiceMessageContentItemModel.text(
+          conversation,
+        ),
+      ],
+      role: OpenAIChatMessageRole.user,
+    );
+
+    final requestMessages = [systemMessage, userMessage];
+    OpenAIChatCompletionModel chatCompletion = await OpenAI.instance.chat.create(
+    model: "gpt-4-0125-preview",
+    responseFormat: {"type": "text"},
+    seed: 6,
+    messages: requestMessages,
+    temperature: 0.9,
+    maxTokens: 10,
   );
 
     print(chatCompletion.choices.first.message); // ...
