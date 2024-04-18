@@ -1,10 +1,9 @@
 import 'package:chatbot_app/auth/firebase_auth/auth_util.dart';
 import 'package:dart_openai/dart_openai.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 
 class GPTService {
 
-  Future<String?> queryGPT(String prompt) async {
+  Future<String?> queryGPT(String prompt, double temperature) async {
     print(currentUserDisplayName);
       final systemMessage = OpenAIChatCompletionChoiceMessageModel(
         content: [
@@ -25,21 +24,20 @@ class GPTService {
 
     final requestMessages = [systemMessage, userMessage];
     OpenAIChatCompletionModel chatCompletion = await OpenAI.instance.chat.create(
-    model: "gpt-4-0125-preview",
-    responseFormat: {"type": "text"},
-    seed: 6,
-    messages: requestMessages,
-    temperature: 0.7,
-    maxTokens: 300,
-  );
+      model: 'gpt-4-0125-preview',
+      responseFormat: {"type": "text"},
+      seed: 6,
+      messages: requestMessages,
+      temperature: temperature,
+      maxTokens: 300,
+    );
 
     print(chatCompletion.choices.first.message); // ...
-    // ignore: prefer_interpolation_to_compose_strings
     print("Tokens: ${chatCompletion.usage.promptTokens}"); // ...
     return chatCompletion.choices.first.message.content?.first.text;
   }
 
-  Future<String?> titleGPT(String conversation) async {
+  Future<String?> titleGPT(String conversation, {String model = 'gpt-4-0125-preview'}) async {
     print(currentUserDisplayName);
       final systemMessage = OpenAIChatCompletionChoiceMessageModel(
         content: [
@@ -60,16 +58,15 @@ class GPTService {
 
     final requestMessages = [systemMessage, userMessage];
     OpenAIChatCompletionModel chatCompletion = await OpenAI.instance.chat.create(
-    model: "gpt-4-0125-preview",
-    responseFormat: {"type": "text"},
-    seed: 6,
-    messages: requestMessages,
-    temperature: 0.9,
-    maxTokens: 10,
-  );
+      model: model,
+      responseFormat: {"type": "text"},
+      seed: 6,
+      messages: requestMessages,
+      temperature: 0.9,
+      maxTokens: 10,
+    );
 
     print(chatCompletion.choices.first.message); // ...
-    // ignore: prefer_interpolation_to_compose_strings
     print("Tokens: ${chatCompletion.usage.promptTokens}"); // ...
     return chatCompletion.choices.first.message.content?.first.text;
   }

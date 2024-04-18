@@ -3,7 +3,6 @@
 import 'dart:async';
 
 import 'package:chatbot_app/backend/backend.dart';
-import 'package:firebase_core/firebase_core.dart';
 
 import '/auth/firebase_auth/auth_util.dart';
 import '/flutter_flow/flutter_flow_animations.dart';
@@ -64,6 +63,7 @@ class _ChatHomeWidgetState extends State<ChatHomeWidget> with TickerProviderStat
   String _gptResponse = '';
   bool _isLoading = false;
   String _currentConversationId = '';
+  String dropDownValue = 'Precise';
 
   void _getResponse() async {
     // Set the loading state to true and add the user message to the chat
@@ -78,8 +78,24 @@ class _ChatHomeWidgetState extends State<ChatHomeWidget> with TickerProviderStat
     // Add the conversation to the 'Conversations' collection of the current user
     // Add the messages to the 'messages' collection of the current conversation
     try {
-      final String query = "${_getConversationContext()}\n${_model.textController.text}"; 
-      final response = await _gptService.queryGPT(query);
+      final String query = "${_getConversationContext()}\n${_model.textController.text}";
+
+      double temperature;
+      switch(dropDownValue) {
+        case 'Precise':
+          temperature = 0.3;
+          break;
+        case 'Balanced':
+          temperature = 1;
+          break;
+        case 'Creative':
+          temperature = 1.6;
+          break;
+        default:
+          temperature = 1; // Default value if none of the options match
+      }
+
+      final response = await _gptService.queryGPT(query, temperature);
       setState(() {
       _gptResponse = response!;
       _chatMessages.add(ChatMessage(response, 'GPT'));
@@ -215,21 +231,16 @@ class _ChatHomeWidgetState extends State<ChatHomeWidget> with TickerProviderStat
 
   Future<void> deleteConversation(String conversationId) async {
     final FirebaseFirestore db = FirebaseFirestore.instance;
-
     // Reference to the conversation document
     final DocumentReference conversationRef = db.collection('users').doc(currentUserReference?.id).collection('Conversations').doc(conversationId);
-
     // Get all messages within the 'messages' subcollection
     final QuerySnapshot messagesSnapshot = await conversationRef.collection('messages').get();
-
     // Delete all messages
     for (DocumentSnapshot msgDoc in messagesSnapshot.docs) {
       await msgDoc.reference.delete();
     }
-
     // After all messages are deleted, delete the conversation document
     await conversationRef.delete();
-
     print('All messages and the conversation have been deleted.');
   }
 
@@ -511,24 +522,26 @@ class _ChatHomeWidgetState extends State<ChatHomeWidget> with TickerProviderStat
                 setState(() {
                   _chatMessages.clear();
                 });
+                // Close the drawer
+                Navigator.of(context).pop();
               },
-              text: 'New Chat',
+              text: 'New',
               options: FFButtonOptions(
-              height: 40.0,
-              padding: const EdgeInsetsDirectional.fromSTEB(34.0, 0.0, 34.0, 0.0),
-              iconPadding: const EdgeInsetsDirectional.fromSTEB(0.0, 0.0, 0.0, 0.0),
-              color: FlutterFlowTheme.of(context).secondary,
-              textStyle: FlutterFlowTheme.of(context).titleSmall.override(
-                fontFamily: 'Roboto',
-                color: FlutterFlowTheme.of(context).alternate,
-                letterSpacing: 0.0,
-              ),
-              elevation: 3.0,
-              borderSide: const BorderSide(
-                color: Colors.transparent,
-                width: 1.0,
-              ),
-              borderRadius: BorderRadius.circular(8.0),
+                height: 40.0,
+                padding: const EdgeInsets.symmetric(horizontal: 136.0),
+                iconPadding: const EdgeInsets.all(0.0),
+                color: FlutterFlowTheme.of(context).secondary,
+                textStyle: FlutterFlowTheme.of(context).titleLarge.override(
+                  fontFamily: 'Roboto',
+                  color: FlutterFlowTheme.of(context).alternate,
+                  letterSpacing: 0.0,
+                ),
+                elevation: 3.0,
+                borderSide: const BorderSide(
+                  color: Colors.transparent,
+                  width: 1.0,
+                ),
+                borderRadius: BorderRadius.circular(8.0),
               ),
             ),
       Expanded(
@@ -542,59 +555,89 @@ class _ChatHomeWidgetState extends State<ChatHomeWidget> with TickerProviderStat
               return const Center(child: CircularProgressIndicator());
             }
             return ListView(
-              padding: EdgeInsets.zero,
+              padding: const EdgeInsets.symmetric(vertical: 12.0),
               children: snapshot.data!.docs.map((DocumentSnapshot document) {
               Map<String, dynamic> data = document.data()! as Map<String, dynamic>;
               return Row(
               children: [
                 Expanded(
-                child: FFButtonWidget(
-                  onPressed: () async {
-                  print('Conversation with ${data['title']} pressed.');
-                  print('Conversation ID: ${data['id']}');
-                  setState(() {
-                    _currentConversationId = data['id'];
-                  });
-                  var messageList = await fetchConversationMessages();
-                  print("message: $messageList");
-                  setState(() {
-                    _chatMessages.clear();
-                    for (int i = 0; i < messageList!.length; i++) {
-                    String sender = i % 2 == 0 ? 'User' : 'GPT';
-                    _chatMessages.add(ChatMessage(messageList[i]!, sender));
-                    }
-                  });
-                  },
-                  text: data['title'] ?? "No Title",
-                  options: FFButtonOptions(
-                  height: 40.0,
-                  padding: const EdgeInsetsDirectional.fromSTEB(24.0, 0.0, 24.0, 0.0),
-                  iconPadding: const EdgeInsetsDirectional.fromSTEB(0.0, 0.0, 0.0, 0.0),
-                  color: FlutterFlowTheme.of(context).primary,
-                  textStyle: FlutterFlowTheme.of(context).titleSmall.override(
-                    fontFamily: 'Roboto',
-                    color: FlutterFlowTheme.of(context).alternate,
-                    letterSpacing: 0.0,
-                  ),
-                  elevation: 3.0,
-                  borderSide: const BorderSide(
-                    color: Colors.transparent,
-                    width: 1.0,
-                  ),
-                  borderRadius: BorderRadius.circular(8.0),
+                  child: FFButtonWidget(
+                    onPressed: () async {
+                      print('Conversation with ${data['title']} pressed.');
+                      print('Conversation ID: ${data['id']}');
+                      setState(() {
+                        _currentConversationId = data['id'];
+                      });
+                      var messageList = await fetchConversationMessages();
+                      print("message: $messageList");
+                      setState(() {
+                        _chatMessages.clear();
+                        for (int i = 0; i < messageList!.length; i++) {
+                          String sender = i % 2 == 0 ? 'User' : 'GPT';
+                          _chatMessages.add(ChatMessage(messageList[i]!, sender));
+                        }
+                      });
+                    },
+                    text: data['title'] ?? "No Title",
+                    options: FFButtonOptions(
+                      height: 40.0,
+                      padding: const EdgeInsetsDirectional.fromSTEB(24.0, 0.0, 24.0, 0.0),
+                      iconPadding: const EdgeInsetsDirectional.fromSTEB(0.0, 0.0, 0.0, 0.0),
+                      color: FlutterFlowTheme.of(context).primary,
+                      textStyle: FlutterFlowTheme.of(context).titleSmall.override(
+                        fontFamily: 'Roboto',
+                        color: FlutterFlowTheme.of(context).alternate,
+                        letterSpacing: 0.0,
+                      ),
+                      elevation: 3.0,
+                      borderSide: const BorderSide(
+                        color: Colors.transparent,
+                        width: 1.0,
+                      ),
+                      borderRadius: BorderRadius.circular(8.0),
+                    ),
                   ),
                 ),
+                const SizedBox(height: 42.0), // Add this line to create vertical space
+                Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(8.0),
+                    color: Colors.red,
+                  ),
+                  child: IconButton(
+                    icon: Icon(Icons.delete, color: FlutterFlowTheme.of(context).secondaryBackground),
+                    onPressed: () async {
+                      showDialog(
+                        context: context,
+                        builder: (BuildContext context) {
+                          return AlertDialog(
+                            title: const Text('Delete Conversation'),
+                            content: Text('Are you sure you want to delete "${data['title']}"?'),
+                            actions: <Widget>[
+                              TextButton(
+                                child: const Text('Cancel'),
+                                onPressed: () {
+                                  Navigator.of(context).pop();
+                                },
+                              ),
+                              TextButton(
+                                child: const Text('Delete'),
+                                onPressed: () async {
+                                  await deleteConversation(data['id']);
+                                  setState(() {
+                                    _chatMessages.clear();
+                                  });
+                                  Navigator.of(context).pop();
+                                },
+                              ),
+                            ],
+                          );
+                        },
+                      );
+                    },
+                  ),
                 ),
-                IconButton(
-                icon: const Icon(Icons.delete, color: Colors.red),
-                onPressed: () async {
-                  await deleteConversation(data['id']);
-                  setState(() {
-                  _chatMessages.clear();
-                  });
-                },
-                ),
-              ],
+              ]
               );
               }).toList(),
             );
@@ -642,34 +685,51 @@ class _ChatHomeWidgetState extends State<ChatHomeWidget> with TickerProviderStat
             mainAxisSize: MainAxisSize.max,
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(8.0),
-                child: Image.asset(
-                  'assets/images/geminiLogo.png',
-                  width: 45.0,
-                  height: 45.0,
-                  fit: BoxFit.cover,
+              DropdownButton<String>(
+                value: dropDownValue,
+                icon: const Icon(Icons.arrow_downward),
+                iconSize: 24,
+                elevation: 16,
+                style: TextStyle(color: FlutterFlowTheme.of(context).secondary, fontSize: 24.0),
+                underline: Container(
+                  height: 3,
+                  color: FlutterFlowTheme.of(context).secondary,
                 ),
-              ),
-              Switch.adaptive(
-                value: _model.switchValue ??= false,
-                onChanged: (newValue) async {
-                  setState(() => _model.switchValue = newValue);
+                onChanged: (String? newValue) {
+                  switch (newValue) {
+                    case 'Precise':
+                      // Placeholder function for Precise
+                      setState(() {
+                        dropDownValue = 'Precise';
+                      });
+                      print('Precise selected');
+                      break;
+                    case 'Balanced':
+                      // Placeholder function for Balanced
+                      setState(() {
+                        dropDownValue = 'Balanced';
+                      });
+                      print('Balanced selected');
+                      break;
+                    case 'Creative':
+                      // Placeholder function for Creative
+                      setState(() {
+                        dropDownValue = 'Creative';
+                      });
+                      print('Creative selected');
+                      break;
+                    default:
+                      break;
+                  }
                 },
-                activeColor: FlutterFlowTheme.of(context).secondary,
-                activeTrackColor: FlutterFlowTheme.of(context).tertiary,
-                inactiveTrackColor: FlutterFlowTheme.of(context).secondary,
-                inactiveThumbColor:
-                    FlutterFlowTheme.of(context).primaryBackground,
-              ),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(8.0),
-                child: Image.asset(
-                  'assets/images/chatGPTLogo.jpg',
-                  width: 45.0,
-                  height: 45.0,
-                  fit: BoxFit.cover,
-                ),
+                items: <String>['Precise', 'Balanced', 'Creative']
+                  .map<DropdownMenuItem<String>>((String value) {
+                    return DropdownMenuItem<String>(
+                      value: value,
+                      child: Text(value),
+                    );
+                  })
+                  .toList(),
               ),
             ],
           ).animateOnPageLoad(animationsMap['rowOnPageLoadAnimation']!),
